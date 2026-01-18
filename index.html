@@ -1,0 +1,185 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPL 2026 Final Auction Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap');
+        body { background: #020617; color: white; font-family: 'Rajdhani', sans-serif; }
+        .glitch-text { font-family: 'Orbitron', sans-serif; text-shadow: 2px 2px #ef4444; }
+        .rtm-active { animation: pulse 1.5s infinite; border: 4px solid #facc15; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center bg-slate-900 p-6 rounded-3xl border-b-4 border-yellow-500 mb-8 shadow-2xl gap-4">
+            <div>
+                <h1 class="text-4xl font-black glitch-text text-yellow-500 italic uppercase">Auction 2026</h1>
+                <p id="timerText" class="text-sm font-bold text-slate-400 tracking-widest uppercase mt-1">Status: Live Room</p>
+            </div>
+            <div class="flex gap-10">
+                <div class="text-center"><p class="text-xs text-slate-500">PURSE</p><p class="text-3xl font-bold text-green-400">₹<span id="purseDisplay">120.00</span> Cr</p></div>
+                <div class="text-center"><p class="text-xs text-slate-500">RTM CARDS</p><p class="text-3xl font-bold text-yellow-500" id="rtmDisplay">3</p></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-6">
+                <div id="playerCard" class="bg-slate-900 rounded-[2.5rem] p-10 border border-slate-800 relative shadow-inner overflow-hidden">
+                    
+                    <div id="rtmOverlay" class="hidden absolute inset-0 bg-black/95 z-30 flex flex-col items-center justify-center text-center p-8">
+                        <div class="text-yellow-500 text-6xl font-bold mb-4 uppercase italic">RTM Triggered!</div>
+                        <p class="text-2xl mb-8">Does <span id="pOriginal" class="text-blue-400 font-bold">...</span> wish to match the bid of <span class="text-green-400 font-bold">₹<span id="finalBidVal"></span> Cr</span>?</p>
+                        <div class="flex gap-6 w-full max-w-md">
+                            <button onclick="rtmClaim()" class="flex-1 bg-yellow-500 text-black font-black py-5 rounded-2xl text-2xl hover:bg-yellow-400">MATCH</button>
+                            <button onclick="rtmPass()" class="flex-1 bg-slate-700 font-bold py-5 rounded-2xl text-2xl hover:bg-slate-600">PASS</button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <span id="pTag" class="bg-blue-600 text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-widest">Set 1: Marquee</span>
+                            <h2 id="pName" class="text-7xl font-black mt-4 uppercase italic tracking-tighter leading-none">Rishabh Pant</h2>
+                            <p id="pDetails" class="text-2xl text-slate-400 mt-2 font-medium">India | Previous: <span class="text-yellow-500">DC</span></p>
+                        </div>
+                        <div id="pEmoji" class="text-9xl opacity-10 select-none">🇮🇳</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6 mt-12">
+                        <div class="bg-black/40 p-6 rounded-3xl border border-slate-800">
+                            <p class="text-slate-500 text-xs font-bold uppercase mb-1">Base Price</p>
+                            <p class="text-3xl font-bold italic">₹<span id="pBase">2.00</span> Cr</p>
+                        </div>
+                        <div class="bg-black/40 p-6 rounded-3xl border border-slate-800">
+                            <p class="text-slate-500 text-xs font-bold uppercase mb-1">Current Bid</p>
+                            <p class="text-5xl font-bold text-yellow-500 italic leading-none">₹<span id="pBid">0.00</span> Cr</p>
+                        </div>
+                    </div>
+
+                    <div id="lockMsg" class="hidden mt-8 bg-red-600/10 border border-red-500/50 p-4 rounded-xl text-red-500 text-center font-bold text-sm animate-pulse">
+                        ⚠️ 2026 SALARY LOCK: Overseas bid > ₹18 Cr. Player salary capped at ₹18 Cr.
+                    </div>
+
+                    <div class="mt-10 flex gap-4">
+                        <button onclick="placeBid()" class="flex-[2] bg-blue-600 hover:bg-blue-500 py-7 rounded-3xl text-4xl font-black shadow-xl transition-all active:scale-95 border-b-8 border-blue-800">BID</button>
+                        <button onclick="triggerSold()" class="flex-1 bg-red-600 hover:bg-red-500 py-7 rounded-3xl text-2xl font-black border-b-8 border-red-800">SOLD</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-slate-900 p-8 rounded-[2.5rem] border border-slate-800 flex flex-col h-[500px]">
+                    <h3 class="text-2xl font-bold text-yellow-500 mb-6 uppercase italic flex justify-between">
+                        <span>My Squad</span>
+                        <span id="squadCount" class="text-slate-500 text-sm font-normal pt-2">0/25</span>
+                    </h3>
+                    <div id="squadContainer" class="flex-1 overflow-y-auto pr-2 space-y-3">
+                        <p class="text-slate-600 italic text-center mt-20">No players signed...</p>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-slate-800">
+                        <button onclick="nextPlayer()" class="w-full bg-white text-black py-4 rounded-2xl font-black text-xl hover:bg-slate-200 mb-3">NEXT PLAYER →</button>
+                        <button onclick="share()" class="w-full bg-green-600 py-4 rounded-2xl font-black text-xl hover:bg-green-500 flex items-center justify-center gap-2">WHATSAPP SHARE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const players = [
+            { name: "Rishabh Pant", country: "India", prev: "DC", base: 2.0, emoji: "🇮🇳", tag: "Marquee" },
+            { name: "Heinrich Klaasen", country: "South Africa ✈️", prev: "SRH", base: 2.0, emoji: "🇿🇦", tag: "Marquee" },
+            { name: "Mitchell Starc", country: "Australia ✈️", prev: "KKR", base: 2.0, emoji: "🇦🇺", tag: "Overseas Ace" },
+            { name: "Prashant Veer", country: "India", prev: "SRH", base: 0.3, emoji: "🇮🇳", tag: "Uncapped All-Rounder" },
+            { name: "Ravi Bishnoi", country: "India", prev: "LSG", base: 2.0, emoji: "🇮🇳", tag: "Capped Bowler" }
+        ];
+
+        let idx = 0, purse = 120.0, bid = 0, rtmCount = 3, squad = [];
+
+        function draw() {
+            const p = players[idx];
+            document.getElementById('pName').innerText = p.name;
+            document.getElementById('pDetails').innerHTML = `${p.country} | Previous: <span class="text-yellow-500">${p.prev}</span>`;
+            document.getElementById('pBase').innerText = p.base.toFixed(2);
+            document.getElementById('pBid').innerText = bid.toFixed(2);
+            document.getElementById('pTag').innerText = p.tag;
+            document.getElementById('pEmoji').innerText = p.emoji;
+            document.getElementById('purseDisplay').innerText = purse.toFixed(2);
+            document.getElementById('rtmDisplay').innerText = rtmCount;
+            document.getElementById('finalBidVal').innerText = bid.toFixed(2);
+            document.getElementById('pOriginal').innerText = p.prev;
+
+            const isLocked = p.country.includes('✈️') && bid > 18;
+            document.getElementById('lockMsg').classList.toggle('hidden', !isLocked);
+        }
+
+        function placeBid() {
+            if (bid === 0) bid = players[idx].base;
+            else {
+                let step = bid >= 10 ? 0.5 : (bid >= 2 ? 0.2 : 0.1);
+                bid += step;
+            }
+            draw();
+        }
+
+        function triggerSold() {
+            if (bid === 0) { alert("Unsold!"); nextPlayer(); return; }
+            document.getElementById('rtmOverlay').classList.remove('hidden');
+        }
+
+        function rtmClaim() {
+            if (rtmCount > 0) {
+                rtmCount--;
+                alert(`${players[idx].prev} matched the bid! You lost the player.`);
+                closeRTM();
+            } else {
+                alert("No RTM cards left for them!");
+                rtmPass();
+            }
+        }
+
+        function rtmPass() {
+            purse -= bid;
+            squad.push({ name: players[idx].name, price: bid });
+            updateSquad();
+            closeRTM();
+        }
+
+        function closeRTM() {
+            document.getElementById('rtmOverlay').classList.add('hidden');
+            draw();
+        }
+
+        function updateSquad() {
+            const container = document.getElementById('squadContainer');
+            container.innerHTML = squad.map(p => `
+                <div class="flex justify-between bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
+                    <span class="font-black uppercase italic text-sm">${p.name}</span>
+                    <span class="text-green-400 font-bold">₹${p.price.toFixed(2)} Cr</span>
+                </div>
+            `).join('');
+            document.getElementById('squadCount').innerText = `${squad.length}/25`;
+        }
+
+        function nextPlayer() {
+            idx = (idx + 1) % players.length;
+            bid = 0;
+            document.getElementById('rtmOverlay').classList.add('hidden');
+            draw();
+        }
+
+        function share() {
+            if (!squad.length) return alert("Sign some players first!");
+            let msg = "🔥 *MY IPL 2026 MEGA AUCTION SQUAD* 🔥\n\n";
+            squad.forEach((p, i) => msg += `${i+1}. *${p.name}* (₹${p.price.toFixed(2)} Cr)\n`);
+            msg += `\n💰 *Remaining Purse:* ₹${purse.toFixed(2)} Cr\n🏟️ *Build yours now!*`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        draw();
+    </script>
+</body>
+</html>
